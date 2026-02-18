@@ -1,0 +1,225 @@
+
+<div class="container">
+  <h1>{{title}}</h1>
+  <p class="subtitle">Student Data Processing</p>
+
+  <div class="card">
+    <h2> Data Generation</h2>
+    <p>Generate an Excel file with student records</p>
+
+    <div class="form-group">
+      <label for="recordCount">Number of Records to Generate:</label>
+      <input 
+        type="number" 
+        id="recordCount" 
+        [(ngModel)]="recordCount" 
+        [disabled]="generateLoading"
+        placeholder="Enter number (e.g., 1000)"
+        min="1">
+    </div>
+
+    <button 
+      class="btn-primary" 
+      (click)="generateExcel()" 
+      [disabled]="generateLoading">
+      {{generateLoading ? 'Generating...' : 'Generate Excel File'}}
+    </button>
+
+    <div class="spinner" *ngIf="generateLoading"></div>
+
+    <div class="alert alert-success" *ngIf="generateMessage">
+      {{generateMessage}}
+    </div>
+
+    <div class="alert alert-error" *ngIf="generateError">
+      {{generateError}}
+    </div>
+
+    <div class="alert alert-info" *ngIf="!generateLoading && !generateMessage">
+      <strong>File Location:</strong> C:\var\log\applications\API\dataprocessing\
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Data Processing</h2>
+    <p>Upload Excel file and convert to CSV (Score + 10)</p>
+
+    <div class="form-group">
+      <label for="excelFile">Select Excel File (.xlsx):</label>
+      <input 
+        type="file" 
+        id="excelFile" 
+        (change)="onExcelFileSelected($event)" 
+        accept=".xlsx"
+        [disabled]="processLoading">
+      <small *ngIf="selectedExcelFile" style="color: #28a745; display: block; margin-top: 5px;">
+        ✓ Selected: {{selectedExcelFile.name}}
+      </small>
+    </div>
+
+    <button 
+      class="btn-primary" 
+      (click)="processExcelToCsv()" 
+      [disabled]="processLoading || !selectedExcelFile">
+      {{processLoading ? 'Processing...' : 'Process Excel to CSV'}}
+    </button>
+
+    <div class="spinner" *ngIf="processLoading"></div>
+
+    <div class="alert alert-success" *ngIf="processMessage">
+      {{processMessage}}
+    </div>
+
+    <div class="alert alert-error" *ngIf="processError">
+      {{processError}}
+    </div>
+
+    <div class="alert alert-info" *ngIf="!processLoading && !processMessage">
+      <strong>Note:</strong> Scores in CSV will be Excel scores + 10
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Data Upload</h2>
+    <p>Upload CSV file to PostgreSQL database (Score + 5 more)</p>
+
+    <div class="form-group">
+      <label for="csvFile">Select CSV File (.csv):</label>
+      <input 
+        type="file" 
+        id="csvFile" 
+        (change)="onCsvFileSelected($event)" 
+        accept=".csv"
+        [disabled]="uploadLoading">
+      <small *ngIf="selectedCsvFile" style="color: #28a745; display: block; margin-top: 5px;">
+        ✓ Selected: {{selectedCsvFile.name}}
+      </small>
+    </div>
+
+    <button 
+      class="btn-primary" 
+      (click)="uploadCsvToDatabase()" 
+      [disabled]="uploadLoading || !selectedCsvFile">
+      {{uploadLoading ? 'Uploading...' : 'Upload CSV to Database'}}
+    </button>
+
+    <button 
+      class="btn-secondary" 
+      (click)="clearDatabase()" 
+      [disabled]="uploadLoading || studentCount === 0">
+      Clear Database
+    </button>
+
+    <div class="spinner" *ngIf="uploadLoading"></div>
+
+    <div class="alert alert-success" *ngIf="uploadMessage">
+      {{uploadMessage}}
+    </div>
+
+    <div class="alert alert-error" *ngIf="uploadError">
+      {{uploadError}}
+    </div>
+
+    <div class="alert alert-info" style="margin-top: 15px;">
+      <strong>Current Database Records:</strong> {{studentCount | number}}
+      <br><strong>Total Score Transformation:</strong> Excel score + 10 (CSV) + 5 (DB) = +15 total
+    </div>
+  </div>
+
+ 
+  <div class="card">
+    <h2> Student Report</h2>
+    <p>View, search, filter and export student data</p>
+
+    <!-- Filters -->
+    <div class="filters">
+      <div class="form-group">
+        <label for="searchId">Search by Student ID:</label>
+        <input 
+          type="number" 
+          id="searchId" 
+          [(ngModel)]="searchStudentId" 
+          placeholder="Enter student ID"
+          (keyup.enter)="searchStudents()">
+      </div>
+
+      <div class="form-group">
+        <label for="filterClass">Filter by Class:</label>
+        <select id="filterClass" [(ngModel)]="filterClass" (change)="searchStudents()">
+          <option value="">All Classes</option>
+          <option *ngFor="let class of availableClasses" [value]="class">{{class}}</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 15px;">
+      <button class="btn-primary" (click)="searchStudents()">Apply Filters</button>
+      <button class="btn-secondary" (click)="clearFilters()">Clear Filters</button>
+    </div>
+
+    <!-- Export Buttons -->
+    <div class="export-buttons">
+      <button class="btn-success" (click)="exportExcel()">📥 Export Excel</button>
+      <button class="btn-success" (click)="exportCsv()">📥 Export CSV</button>
+      <button class="btn-success" (click)="exportPdf()">📥 Export PDF</button>
+    </div>
+
+    <div class="spinner" *ngIf="reportLoading"></div>
+
+    <div class="alert alert-error" *ngIf="reportError">
+      {{reportError}}
+    </div>
+
+    <!-- Students Table -->
+    <div *ngIf="!reportLoading && students.length > 0">
+      <table>
+        <thead>
+          <tr>
+            <th>Student ID</th>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Date of Birth</th>
+            <th>Class</th>
+            <th>Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let student of students">
+            <td>{{student.studentId}}</td>
+            <td>{{student.firstName}}</td>
+            <td>{{student.lastName}}</td>
+            <td>{{student.dob}}</td>
+            <td>{{student.studentClass}}</td>
+            <td>{{student.score}}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Pagination -->
+      <div class="pagination">
+        <button 
+          (click)="previousPage()" 
+          [disabled]="currentPage === 0"
+          class="btn-secondary">
+          « Previous
+        </button>
+
+        <span class="pagination-info">
+          Page {{currentPage + 1}} of {{totalPages}} 
+          ({{totalElements | number}} total students)
+        </span>
+
+        <button 
+          (click)="nextPage()" 
+          [disabled]="currentPage >= totalPages - 1"
+          class="btn-secondary">
+          Next »
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="!reportLoading && students.length === 0" class="alert alert-info">
+      No students found. Upload data to proceed.
+    </div>
+  </div>
+</div>
